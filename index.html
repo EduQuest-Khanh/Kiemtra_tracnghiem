@@ -1,418 +1,435 @@
-
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EduQuest - Nền tảng Khảo thí Tương tác</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎓</text></svg>">
-    <style>
-        body {
-            font-family: Inter, sans-serif;
-            background-color: #f8f9fa;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduQuest: Nền tảng Khảo thí Tương tác</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎓</text></svg>">
+  <style>
+    body {
+      font-family: Inter, sans-serif;
+    }
+  </style>
 </head>
-<body>
-    <div id="root"></div>
 
-    <!-- React Libraries -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<body class="bg-gray-50">
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <script type="text/babel" data-presets="react,typescript">
+
+    const { useState, useRef, useEffect } = React;
+
+    // =============== ICON COMPONENTS ===============
+    const FileIcon = () => (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    );
+
+    const SparklesIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+        </svg>
+    );
+
+    const ChartBarIcon = () => (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    );
     
-    <!-- Babel for JSX Transpilation -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- SheetJS (xlsx) for Excel file reading -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    const EditIcon = ({ className = "h-5 w-5 mr-2" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+        <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+        <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
+      </svg>
+    );
 
-    <script type="text/babel" data-presets="react,typescript">
-        const { useState, useEffect, useRef } = React;
+    const TrashIcon = ({ className = "h-5 w-5 mr-2" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+      </svg>
+    );
 
-        // =============== ICON COMPONENTS ===============
-        const FileIcon = () => (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-        );
+    const ArrowLeftIcon = ({ className = "h-5 w-5 mr-2" }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+        </svg>
+    );
 
-        const SparklesIcon = () => (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.293 2.293a1 1 0 010 1.414L10 16l-4 4 4-4 5.293 5.293a1 1 0 010 1.414L15 21l-4-4-5.293-5.293a1 1 0 01-1.414 0L3 12l4 4 4-4 1.293-1.293a1 1 0 011.414 0z" />
-            </svg>
-        );
-
-        const ChartBarIcon = () => (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-        );
-        
-        const UploadIcon = () => (
-             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-        );
-
-        const EditIcon = () => (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-        );
-
-        const TrashIcon = () => (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-        );
-
-        const ArrowLeftIcon = () => (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-        );
-
-        const SaveIcon = () => (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-            </svg>
-        );
+    const SaveIcon = ({ className = "h-5 w-5 mr-2" }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+            <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z" />
+        </svg>
+    );
 
 
-        // =============== LAYOUT COMPONENTS ===============
-        const Header = () => (
-            <header className="bg-white shadow-sm">
-                <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-indigo-600">EduQuest</h1>
-                    <p className="text-sm text-gray-500 italic">Kiểm tra Vui vẻ, Đánh giá Nghiêm túc</p>
+    // =============== LAYOUT COMPONENTS ===============
+    const Header = () => (
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-indigo-600">🎓 EduQuest</h1>
+          <p className="text-sm text-gray-500 italic">Kiểm tra Vui vẻ, Đánh giá Nghiêm túc</p>
+        </div>
+      </header>
+    );
+
+    const Footer = () => (
+      <footer className="bg-white">
+        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 text-center text-sm text-gray-400">
+          <p>© 2025 EduQuest. All rights reserved. Phiên bản 3.0</p>
+        </div>
+      </footer>
+    );
+
+    // =============== PAGE COMPONENTS ===============
+    const LandingPage = ({ onNavigate }) => (
+      <div className="flex flex-col items-center justify-center text-center py-20 px-4">
+        <h2 className="text-5xl font-extrabold text-gray-800 mb-4">Chào mừng đến với EduQuest</h2>
+        <p className="max-w-2xl text-lg text-gray-600 mb-8">
+          Nền tảng tạo bài kiểm tra trắc nghiệm kết hợp sự hấp dẫn của game và sự chặt chẽ trong quản lý.
+        </p>
+        <div className="flex space-x-4">
+          <button onClick={() => onNavigate('teacher')} className="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 transition duration-300">
+            Tôi là Giáo viên
+          </button>
+          <button onClick={() => onNavigate('student')} className="bg-teal-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-teal-600 transition duration-300">
+            Tôi là Học sinh
+          </button>
+        </div>
+
+        <div className="mt-24 w-full max-w-5xl">
+            <h3 className="text-3xl font-bold text-gray-800 mb-12">Tính năng nổi bật</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="bg-white p-8 rounded-xl shadow-md flex flex-col items-center text-center">
+                    <div className="bg-indigo-100 p-3 rounded-full mb-4">
+                        <FileIcon />
+                    </div>
+                    <h4 className="text-xl font-semibold text-gray-900 mb-2">Soạn thảo Dễ dàng</h4>
+                    <p className="text-gray-600">Tạo bài kiểm tra nhanh chóng từ file Word và Excel có sẵn.</p>
                 </div>
-            </header>
-        );
-
-        const Footer = () => (
-            <footer className="bg-white">
-                <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 text-center text-sm text-gray-500">
-                    <p>© 2025 EduQuest. All rights reserved. Phiên bản 3.0</p>
+                <div className="bg-white p-8 rounded-xl shadow-md flex flex-col items-center text-center">
+                    <div className="bg-teal-100 p-3 rounded-full mb-4">
+                        <SparklesIcon />
+                    </div>
+                    <h4 className="text-xl font-semibold text-gray-900 mb-2">Trải nghiệm Hấp dẫn</h4>
+                    <p className="text-gray-600">Giao diện làm bài thú vị, giảm căng thẳng cho học sinh.</p>
                 </div>
-            </footer>
-        );
+                <div className="bg-white p-8 rounded-xl shadow-md flex flex-col items-center text-center">
+                    <div className="bg-green-100 p-3 rounded-full mb-4">
+                        <ChartBarIcon />
+                    </div>
+                    <h4 className="text-xl font-semibold text-gray-900 mb-2">Báo cáo Trực quan</h4>
+                    <p className="text-gray-600">Theo dõi kết quả theo thời gian thực và xuất báo cáo chi tiết.</p>
+                </div>
+            </div>
+        </div>
+      </div>
+    );
 
-        // =============== TEACHER DASHBOARD ===============
-        const TeacherDashboard = ({ setView }) => {
-            const [studentList, setStudentList] = useState([]);
-            const [studentFileName, setStudentFileName] = useState("");
-            const fileInputRef = useRef(null);
+    const TeacherDashboard = ({ 
+        onNavigate,
+        studentList, setStudentList,
+        studentFileName, setStudentFileName,
+        questions, setQuestions 
+    }) => {
+      const fileInputRef = useRef(null);
+
+      const handleFileChange = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
             
-            const initialQuestions = [
-                { id: 1, text: 'Thủ đô của Việt Nam là gì?', options: ['TP. Hồ Chí Minh', 'Đà Nẵng', 'Hà Nội', 'Hải Phòng'], correctAnswer: 'C' },
-                { id: 2, text: '1 + 1 = ?', options: ['1', '2', '3', '4'], correctAnswer: 'B' },
-                { id: 3, text: 'Hành tinh nào gần Mặt Trời nhất?', options: ['Sao Hỏa', 'Sao Kim', 'Sao Thủy', 'Sao Mộc'], correctAnswer: 'C' }
-            ];
-            const [questions, setQuestions] = useState(initialQuestions);
+            // Bỏ qua hàng tiêu đề (hàng đầu tiên)
+            const students = json.slice(1).map(row => ({
+              stt: row[0],
+              hoTen: row[1],
+              lop: row[2]
+            }));
 
-            const handleFileChange = (event) => {
-                const file = event.target.files[0];
-                if (file) {
-                    setStudentFileName(file.name);
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, { type: 'array' });
-                        const sheetName = workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[sheetName];
-                        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                        
-                        // Skip header row (json[0])
-                        const students = json.slice(1).map(row => ({
-                            stt: row[0],
-                            name: row[1],
-                            class: row[2]
-                        })).filter(s => s.name); // Filter out empty rows
-                        
-                        setStudentList(students);
-                    };
-                    reader.readAsArrayBuffer(file);
-                }
-            };
+            setStudentList(students);
+            setStudentFileName(file.name);
+          };
+          reader.readAsArrayBuffer(file);
+        }
+      };
+      
+      const handleClearStudents = () => {
+        if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ danh sách học sinh không?')) {
+            setStudentList([]);
+            setStudentFileName('');
+        }
+      };
 
-            const handleClearStudents = () => {
-                if(window.confirm(`Bạn có chắc chắn muốn xóa danh sách ${studentList.length} học sinh không?`)){
-                    setStudentList([]);
-                    setStudentFileName("");
-                    if(fileInputRef.current) {
-                        fileInputRef.current.value = "";
-                    }
-                }
-            };
-            
-            const handleClearQuestions = () => {
-                if(window.confirm(`Bạn có chắc chắn muốn xóa toàn bộ ${questions.length} câu hỏi không?`)){
-                    setQuestions([]);
-                }
-            }
+      const handleClearQuestions = () => {
+         if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ câu hỏi không?')) {
+            setQuestions([]);
+        }
+      }
 
-            const handleAnswerChange = (questionId, newAnswer) => {
-                setQuestions(prevQuestions => 
-                    prevQuestions.map(q => 
-                        q.id === questionId ? { ...q, correctAnswer: newAnswer } : q
-                    )
-                );
-            };
-            
-            const handleSaveChanges = () => {
-                // In a real app, this would send data to a server.
-                // For now, we just show a confirmation.
-                alert("Đã lưu tất cả thay đổi!\n(Chức năng giả lập)");
-            };
+      const handleAnswerChange = (questionIndex, newAnswer) => {
+        const updatedQuestions = [...questions];
+        updatedQuestions[questionIndex].correctAnswer = newAnswer;
+        setQuestions(updatedQuestions);
+      }
 
-            return (
-                <div className="p-8">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-3xl font-bold text-gray-800">Bảng điều khiển của Giáo viên</h2>
-                        <button onClick={() => setView('landing')} className="flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">
-                            <ArrowLeftIcon />
-                            Quay lại Trang chủ
+      const handleSaveChanges = () => {
+        alert('Tất cả các thay đổi đã được lưu (giả lập).');
+      }
+
+      return (
+        <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+            <button 
+                onClick={() => onNavigate('landing')}
+                className="flex items-center mb-6 text-sm font-medium text-indigo-600 hover:text-indigo-800"
+            >
+                <ArrowLeftIcon className="h-4 w-4 mr-1" />
+                Quay lại Trang chủ
+            </button>
+            <h2 className="text-3xl font-bold text-gray-900 mb-8">Bảng điều khiển của Giáo viên</h2>
+          
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Cột 1: Chuẩn bị và Cài đặt */}
+                <div className="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
+                    <h3 className="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">1. Chuẩn bị & Cài đặt</h3>
+                    
+                    {/* Tải danh sách lớp */}
+                    <div className="mb-6">
+                        <h4 className="font-medium text-gray-700 mb-2">Tải lên Danh sách Lớp (Excel)</h4>
+                        <input
+                            type="file"
+                            accept=".xlsx"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            className="hidden"
+                            id="file-upload"
+                        />
+                         <label
+                            htmlFor="file-upload"
+                            className={`w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white cursor-pointer transition-colors duration-200 ${studentFileName ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                        >
+                            <EditIcon />
+                            {studentFileName ? 'Thay đổi file' : 'Chọn file .xlsx'}
+                        </label>
+                        {studentFileName && (
+                            <p className="text-sm text-green-700 mt-2">
+                                Đã tải lên: <strong>{studentFileName}</strong> ({studentList.length} học sinh)
+                            </p>
+                        )}
+                    </div>
+                    <div className="mb-6">
+                        <h4 className="font-medium text-gray-700 mb-2">Tải lên Bộ câu hỏi (Word)</h4>
+                         <label
+                            className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-not-allowed"
+                        >
+                            <EditIcon />
+                            Chọn file .docx (sắp có)
+                        </label>
+                    </div>
+
+                    <div className="mt-8 border-t pt-6">
+                         <button
+                            onClick={handleSaveChanges}
+                            className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700"
+                        >
+                            <SaveIcon />
+                            Lưu tất cả thay đổi
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Column 1: Setup */}
-                        <div className="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
-                            <h3 className="text-xl font-bold text-indigo-600 border-b pb-2 mb-4">1. Chuẩn bị & Cài đặt</h3>
-                            
-                            <div className="mb-6">
-                                <label className="block text-md font-medium text-gray-700 mb-2">Tải lên Danh sách Lớp (Excel)</label>
-                                <input
-                                    type="file"
-                                    accept=".xlsx"
-                                    onChange={handleFileChange}
-                                    className="hidden"
-                                    ref={fileInputRef}
-                                    id="student-file-upload"
-                                />
-                                <label htmlFor="student-file-upload" className={`w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors cursor-pointer ${studentList.length > 0 ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
-                                    <EditIcon /> {studentList.length > 0 ? 'Chọn file khác' : 'Chọn file .xlsx'}
-                                </label>
-                                {studentFileName && (
-                                    <p className="text-sm text-gray-600 mt-2">
-                                        Đã tải lên: <strong>{studentFileName}</strong> ({studentList.length} học sinh)
-                                    </p>
-                                )}
-                            </div>
-                             <div className="mb-6">
-                                <label className="block text-md font-medium text-gray-700 mb-2">Tải lên Bộ câu hỏi (Word)</label>
-                                <button className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">
-                                    <EditIcon /> Chọn file .docx
-                                </button>
-                            </div>
+                </div>
 
-                            <div className="mt-8">
-                               <button 
-                                    onClick={handleSaveChanges}
-                                    className="w-full flex items-center justify-center px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors disabled:bg-gray-300"
-                                >
-                                    <SaveIcon />
-                                    Lưu tất cả thay đổi
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Column 2 & 3: Data Display */}
-                        <div className="lg:col-span-2 space-y-8">
-                           {/* Student List Display */}
+                {/* Cột 2: Dữ liệu đã tải */}
+                <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                    <h3 className="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">2. Dữ liệu & Quản lý</h3>
+                    
+                    {/* Quản lý danh sách học sinh */}
+                    <div className="mb-8">
+                        <div className="flex justify-between items-center mb-3">
+                            <h4 className="font-medium text-gray-700">Danh sách Học sinh</h4>
                             {studentList.length > 0 && (
-                                <div className="bg-white p-6 rounded-lg shadow-md">
-                                    <div className="flex justify-between items-center border-b pb-2 mb-4">
-                                        <h3 className="text-xl font-bold text-indigo-600">Danh sách Học sinh</h3>
-                                        <button onClick={handleClearStudents} className="flex items-center px-3 py-1 bg-red-500 text-white text-sm rounded-md hover:bg-red-600 transition-colors">
-                                            <TrashIcon /> Xóa Danh sách
-                                        </button>
-                                    </div>
-                                    <div className="max-h-64 overflow-y-auto">
-                                        <table className="w-full text-sm text-left text-gray-500">
-                                            <thead className="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
-                                                <tr>
-                                                    <th scope="col" className="py-3 px-6">STT</th>
-                                                    <th scope="col" className="py-3 px-6">Họ và tên</th>
-                                                    <th scope="col" className="py-3 px-6">Lớp</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {studentList.map((student, index) => (
-                                                    <tr key={index} className="bg-white border-b hover:bg-gray-50">
-                                                        <td className="py-4 px-6 font-medium text-gray-900">{student.stt}</td>
-                                                        <td className="py-4 px-6">{student.name}</td>
-                                                        <td className="py-4 px-6">{student.class}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                                <button onClick={handleClearStudents} className="flex items-center text-sm font-medium text-red-600 hover:text-red-800">
+                                    <TrashIcon className="h-4 w-4 mr-1" /> Xóa Danh sách
+                                </button>
                             )}
+                        </div>
+                        <div className="max-h-60 overflow-y-auto border rounded-md">
+                            {studentList.length > 0 ? (
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Họ và tên</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lớp</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                       {studentList.map(student => (
+                                         <tr key={student.stt}>
+                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.stt}</td>
+                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{student.hoTen}</td>
+                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.lop}</td>
+                                         </tr>
+                                       ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <p className="text-center text-gray-500 p-8">Chưa có dữ liệu học sinh. Vui lòng tải lên file Excel.</p>
+                            )}
+                        </div>
+                    </div>
 
-                             {/* Question List Display */}
-                            {questions.length > 0 && (
-                                <div className="bg-white p-6 rounded-lg shadow-md">
-                                     <div className="flex justify-between items-center border-b pb-2 mb-4">
-                                        <h3 className="text-xl font-bold text-indigo-600">Danh sách Câu hỏi</h3>
-                                        <button onClick={handleClearQuestions} className="flex items-center px-3 py-1 bg-red-500 text-white text-sm rounded-md hover:bg-red-600 transition-colors">
-                                            <TrashIcon /> Xóa Toàn bộ
-                                        </button>
-                                    </div>
-                                    <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                                        {questions.map((q, index) => (
-                                            <div key={q.id} className="border p-4 rounded-md">
-                                                <p className="font-semibold mb-2">{`Câu ${index + 1}: ${q.text}`}</p>
-                                                <div className="space-y-1">
-                                                    {q.options.map((option, optionIndex) => {
-                                                        const optionLetter = String.fromCharCode(65 + optionIndex);
-                                                        return (
-                                                            <div key={optionIndex} className="flex items-center">
-                                                                <input
-                                                                    type="radio"
-                                                                    id={`q${q.id}-opt${optionLetter}`}
-                                                                    name={`question-${q.id}`}
-                                                                    value={optionLetter}
-                                                                    checked={q.correctAnswer === optionLetter}
-                                                                    onChange={() => handleAnswerChange(q.id, optionLetter)}
-                                                                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                                                                />
-                                                                <label htmlFor={`q${q.id}-opt${optionLetter}`} className="ml-3 block text-sm text-gray-700">
-                                                                    {`${optionLetter}. ${option}`}
-                                                                </label>
-                                                            </div>
-                                                        );
-                                                    })}
+                     {/* Quản lý câu hỏi */}
+                    <div>
+                        <div className="flex justify-between items-center mb-3">
+                            <h4 className="font-medium text-gray-700">Danh sách Câu hỏi</h4>
+                             {questions.length > 0 && (
+                                <button onClick={handleClearQuestions} className="flex items-center text-sm font-medium text-red-600 hover:text-red-800">
+                                    <TrashIcon className="h-4 w-4 mr-1" /> Xóa Toàn bộ Câu hỏi
+                                </button>
+                            )}
+                        </div>
+                        <div className="max-h-96 overflow-y-auto border rounded-md p-4 space-y-6">
+                            {questions.length > 0 ? (
+                                questions.map((q, index) => (
+                                    <div key={q.id} className="border-b pb-4">
+                                        <p className="font-semibold text-gray-800 mb-2">Câu {index + 1}: {q.question}</p>
+                                        <div className="space-y-1">
+                                            {q.options.map(option => (
+                                                <div key={option.key} className="flex items-center">
+                                                    <input 
+                                                        id={`q${q.id}-${option.key}`}
+                                                        name={`question-${q.id}`}
+                                                        type="radio"
+                                                        checked={q.correctAnswer === option.key}
+                                                        onChange={() => handleAnswerChange(index, option.key)}
+                                                        className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                                                    />
+                                                    <label htmlFor={`q${q.id}-${option.key}`} className="ml-3 block text-sm text-gray-700">
+                                                        <span className="font-medium">{option.key}.</span> {option.value}
+                                                    </label>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                ))
+                            ) : (
+                                <p className="text-center text-gray-500 p-8">Chưa có dữ liệu câu hỏi.</p>
                             )}
                         </div>
                     </div>
                 </div>
-            );
-        };
+            </div>
+        </div>
+      );
+    };
 
+    const StudentFlow = ({ onNavigate }) => {
+      // Giao diện tĩnh cho luồng học sinh
+      return (
+        <div className="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+            <button 
+                onClick={() => onNavigate('landing')}
+                className="flex items-center mb-6 text-sm font-medium text-teal-600 hover:text-teal-800"
+            >
+                <ArrowLeftIcon className="h-4 w-4 mr-1" />
+                Quay lại Trang chủ
+            </button>
+            <div className="bg-white p-8 rounded-lg shadow-md">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold text-gray-900">Xác thực thông tin</h2>
+                    <p className="text-gray-600 mt-2">Vui lòng chọn lớp và tên của bạn để bắt đầu.</p>
+                </div>
 
-        // =============== STUDENT FLOW ===============
-        const StudentFlow = ({ setView }) => {
-            return (
-                 <div className="flex flex-col items-center justify-center p-8">
-                    <h2 className="text-3xl font-bold text-gray-800 mb-6">Giao diện Học sinh</h2>
-                    <p className="text-gray-600 mb-8">Đây là nơi học sinh sẽ thực hiện bài kiểm tra.</p>
-                    <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-md">
-                        <h3 className="text-xl font-bold mb-4">Xác thực thông tin</h3>
-                         <div className="mb-4">
-                            <label htmlFor="class-select" className="block text-sm font-medium text-gray-700">Chọn Lớp</label>
-                            <select id="class-select" name="class-select" className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                                <option>6A</option>
-                                <option>6B</option>
-                                <option>7A</option>
-                            </select>
-                        </div>
-                        <div className="mb-6">
-                            <label htmlFor="name-select" className="block text-sm font-medium text-gray-700">Chọn Họ và Tên</label>
-                            <select id="name-select" name="name-select" className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                                <option>Nguyễn Văn A</option>
-                                <option>Trần Thị B</option>
-                                <option>Lê Quang C</option>
-                            </select>
-                        </div>
-                         <button className="w-full bg-teal-500 text-white px-4 py-2 rounded-md hover:bg-teal-600 transition-colors">Bắt đầu làm bài</button>
+                <div className="mt-8 space-y-6">
+                    <div>
+                        <label htmlFor="class" className="block text-sm font-medium text-gray-700">Lớp</label>
+                        <select id="class" name="class" className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm rounded-md">
+                            <option>-- Chọn lớp --</option>
+                            <option>6A</option>
+                            <option>7B</option>
+                            <option>8C</option>
+                        </select>
                     </div>
-                     <button onClick={() => setView('landing')} className="mt-8 text-indigo-600 hover:text-indigo-800">
-                        Quay lại trang chủ
+                    <div>
+                        <label htmlFor="student-name" className="block text-sm font-medium text-gray-700">Họ và tên</label>
+                        <select id="student-name" name="student-name" className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm rounded-md">
+                            <option>-- Chọn tên của bạn --</option>
+                            <option>Nguyễn Văn A</option>
+                            <option>Trần Thị B</option>
+                        </select>
+                    </div>
+                    <button className="w-full bg-teal-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-teal-600 transition duration-300">
+                        Bắt đầu làm bài
                     </button>
                 </div>
-            )
-        };
-        
-        // =============== LANDING PAGE ===============
-        const LandingPage = ({ setView }) => {
-            return (
-                <div className="text-center py-16 px-4">
-                    <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900">Chào mừng đến với EduQuest</h2>
-                    <p className="mt-4 max-w-2xl mx-auto text-lg text-gray-500">
-                        Nền tảng tạo bài kiểm tra trắc nghiệm kết hợp sự hấp dẫn của game và sự chặt chẽ trong quản lý.
-                    </p>
-                    <div className="mt-8 flex justify-center gap-4">
-                        <button 
-                            onClick={() => setView('teacher')}
-                            className="px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-transform transform hover:scale-105"
-                        >
-                            Tôi là Giáo viên
-                        </button>
-                        <button 
-                            onClick={() => setView('student')}
-                            className="px-8 py-3 bg-teal-500 text-white font-semibold rounded-lg shadow-md hover:bg-teal-600 transition-transform transform hover:scale-105"
-                        >
-                            Tôi là Học sinh
-                        </button>
-                    </div>
+            </div>
+        </div>
+      )
+    };
+    
+    // =============== MAIN APP COMPONENT ===============
+    const App = () => {
+      const [currentPage, setCurrentPage] = useState('landing');
+      
+      // State được nâng lên cấp App
+      const [studentList, setStudentList] = useState([]);
+      const [studentFileName, setStudentFileName] = useState('');
+      const [questions, setQuestions] = useState([
+        { id: 1, question: 'Thủ đô của Việt Nam là gì?', options: [{key: 'A', value: 'Hà Nội'}, {key: 'B', value: 'Đà Nẵng'}, {key: 'C', value: 'TP. HCM'}, {key: 'D', value: 'Hải Phòng'}], correctAnswer: 'A' },
+        { id: 2, question: '1 + 1 = ?', options: [{key: 'A', value: '1'}, {key: 'B', value: '2'}, {key: 'C', value: '3'}, {key: 'D', value: '4'}], correctAnswer: 'B' },
+        { id: 3, question: 'Hành tinh nào gần Mặt trời nhất?', options: [{key: 'A', value: 'Trái Đất'}, {key: 'B', value: 'Sao Hỏa'}, {key: 'C', value: 'Sao Thủy'}, {key: 'D', value: 'Sao Kim'}], correctAnswer: 'C' },
+      ]);
 
-                    <div className="mt-20">
-                        <h3 className="text-3xl font-bold text-gray-800 mb-12">Tính năng nổi bật</h3>
-                        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300">
-                                <div className="mx-auto mb-4 bg-indigo-100 rounded-full h-16 w-16 flex items-center justify-center">
-                                    <FileIcon />
-                                </div>
-                                <h4 className="text-xl font-semibold text-gray-900">Soạn thảo Dễ dàng</h4>
-                                <p className="mt-2 text-gray-600">Tạo bài kiểm tra nhanh chóng từ file Word và Excel có sẵn.</p>
-                            </div>
-                            <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300">
-                               <div className="mx-auto mb-4 bg-purple-100 rounded-full h-16 w-16 flex items-center justify-center">
-                                    <SparklesIcon />
-                                </div>
-                                <h4 className="text-xl font-semibold text-gray-900">Trải nghiệm Hấp dẫn</h4>
-                                <p className="mt-2 text-gray-600">Giao diện làm bài thú vị, giảm căng thẳng cho học sinh.</p>
-                            </div>
-                            <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300">
-                                <div className="mx-auto mb-4 bg-green-100 rounded-full h-16 w-16 flex items-center justify-center">
-                                    <ChartBarIcon />
-                                </div>
-                                <h4 className="text-xl font-semibold text-gray-900">Báo cáo Trực quan</h4>
-                                <p className="mt-2 text-gray-600">Theo dõi kết quả theo thời gian thực và xuất báo cáo chi tiết.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
+      const renderPage = () => {
+        switch (currentPage) {
+          case 'teacher':
+            return <TeacherDashboard 
+                        onNavigate={setCurrentPage}
+                        studentList={studentList}
+                        setStudentList={setStudentList}
+                        studentFileName={studentFileName}
+                        setStudentFileName={setStudentFileName}
+                        questions={questions}
+                        setQuestions={setQuestions}
+                    />;
+          case 'student':
+            return <StudentFlow onNavigate={setCurrentPage} />;
+          default:
+            return <LandingPage onNavigate={setCurrentPage} />;
         }
+      };
 
-        // =============== MAIN APP COMPONENT ===============
-        const App = () => {
-            const [view, setView] = useState('landing'); // 'landing', 'teacher', 'student'
+      return (
+        <div className="min-h-screen flex flex-col">
+          <Header />
+          <main className="flex-grow">
+            {renderPage()}
+          </main>
+          <Footer />
+        </div>
+      );
+    };
 
-            const renderView = () => {
-                switch (view) {
-                    case 'teacher':
-                        return <TeacherDashboard setView={setView} />;
-                    case 'student':
-                        return <StudentFlow setView={setView} />;
-                    case 'landing':
-                    default:
-                        return <LandingPage setView={setView} />;
-                }
-            };
+    const container = document.getElementById('root');
+    const root = ReactDOM.createRoot(container);
+    root.render(<App />);
 
-            return (
-                <div className="min-h-screen flex flex-col">
-                    <Header />
-                    <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8">
-                        {renderView()}
-                    </main>
-                    <Footer />
-                </div>
-            );
-        };
+  </script>
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
 </body>
+
 </html>
