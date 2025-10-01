@@ -153,12 +153,14 @@
             const worksheet = workbook.Sheets[sheetName];
             const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
             
-            // Bỏ qua hàng tiêu đề (hàng đầu tiên)
-            const students = json.slice(1).map(row => ({
-              stt: row[0],
-              hoTen: row[1],
-              lop: row[2]
-            }));
+            // Bỏ qua hàng tiêu đề và lọc ra các hàng trống
+            const students = json.slice(1)
+              .filter(row => row && row[1]) // Chỉ giữ lại những hàng có dữ liệu ở cột "Họ và tên"
+              .map(row => ({
+                stt: row[0],
+                hoTen: row[1],
+                lop: row[2]
+              }));
 
             setStudentList(students);
             setStudentFileName(file.name);
