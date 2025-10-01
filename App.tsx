@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import TeacherDashboard from './components/TeacherDashboard';
-import StudentFlow from './components/StudentFlow';
-import Header from './components/Header';
-import Footer from './components/Footer';
-import { DocumentTextIcon, PresentationChartBarIcon, SparklesIcon } from './components/Icons';
+import TeacherDashboard from './components/TeacherDashboard.tsx';
+import StudentFlow from './components/StudentFlow.tsx';
+import Header from './components/Header.tsx';
+import Footer from './components/Footer.tsx';
+import { DocumentTextIcon, PresentationChartBarIcon, SparklesIcon } from './components/Icons.tsx';
 
 type View = 'landing' | 'teacher' | 'student';
 

@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { FileUploadIcon, ExcelIcon, WordIcon, SettingsIcon, TrashIcon, DownloadIcon, UserGroupIcon, DocumentTextIcon, PresentationChartBarIcon, ShieldCheckIcon } from './Icons';
+import { FileUploadIcon, ExcelIcon, WordIcon, SettingsIcon, TrashIcon, DownloadIcon, UserGroupIcon, DocumentTextIcon, PresentationChartBarIcon, ShieldCheckIcon } from './Icons.tsx';
 
 const TeacherDashboard: React.FC = () => {
   const [password, setPassword] = useState('');

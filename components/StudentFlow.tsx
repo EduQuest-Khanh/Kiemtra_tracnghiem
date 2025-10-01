@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { CheckCircleIcon, XCircleIcon } from './Icons';
+import { CheckCircleIcon, XCircleIcon } from './Icons.tsx';
 
 type StudentStep = 'login' | 'quiz' | 'results';
 
