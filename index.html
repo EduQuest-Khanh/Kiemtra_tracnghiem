@@ -52,7 +52,7 @@
 </head>
 <body class="bg-neutral">
   <div id="root"></div>
-  <!-- Add data-presets to help Babel understand TSX syntax correctly -->
-  <script type="text/babel" data-presets="react,typescript" data-type="module" src="./index.tsx"></script>
+  <!-- Add 'env' preset to correctly handle module transformations (import/export) -->
+  <script type="text/babel" data-presets="env,react,typescript" src="./index.tsx"></script>
 </body>
 </html>
