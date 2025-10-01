@@ -21,10 +21,13 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/@google/generative-ai@0.11.3/dist/index.js"></script>
+  <script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
 
   <script type="text/babel" data-presets="react,typescript">
 
     const { useState, useRef, useEffect } = React;
+    const { GoogleGenAI, Type } = genai;
 
     // =============== ICON COMPONENTS ===============
     const FileIcon = () => (
@@ -70,6 +73,13 @@
         </svg>
     );
 
+    const SpinnerIcon = ({ className = "h-5 w-5 mr-2 animate-spin" }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+    );
+
 
     // =============== LAYOUT COMPONENTS ===============
     const Header = () => (
@@ -112,8 +122,8 @@
                     <div className="bg-indigo-100 p-3 rounded-full mb-4">
                         <FileIcon />
                     </div>
-                    <h4 className="text-xl font-semibold text-gray-900 mb-2">Soạn thảo Dễ dàng</h4>
-                    <p className="text-gray-600">Tạo bài kiểm tra nhanh chóng từ file Word và Excel có sẵn.</p>
+                    <h4 className="text-xl font-semibold text-gray-900 mb-2">Soạn thảo Thông minh</h4>
+                    <p className="text-gray-600">Tạo bài kiểm tra nhanh chóng từ file Word và Excel có sẵn với sự hỗ trợ của AI.</p>
                 </div>
                 <div className="bg-white p-8 rounded-xl shadow-md flex flex-col items-center text-center">
                     <div className="bg-teal-100 p-3 rounded-full mb-4">
@@ -138,9 +148,12 @@
         onNavigate,
         studentList, setStudentList,
         studentFileName, setStudentFileName,
-        questions, setQuestions 
+        questions, setQuestions,
+        questionFileName, setQuestionFileName
     }) => {
       const fileInputRef = useRef(null);
+      const questionFileInputRef = useRef(null);
+      const [isProcessingQuestions, setIsProcessingQuestions] = useState(false);
 
       const handleFileChange = (event) => {
         const file = event.target.files[0];
@@ -153,9 +166,8 @@
             const worksheet = workbook.Sheets[sheetName];
             const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
             
-            // Bỏ qua hàng tiêu đề và lọc ra các hàng trống
             const students = json.slice(1)
-              .filter(row => row && row[1]) // Chỉ giữ lại những hàng có dữ liệu ở cột "Họ và tên"
+              .filter(row => row && row[1]) 
               .map(row => ({
                 stt: row[0],
                 hoTen: row[1],
@@ -169,6 +181,83 @@
         }
       };
       
+      const handleQuestionFileChange = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (questions.length > 0 && !window.confirm(`Thao tác này sẽ thay thế ${questions.length} câu hỏi hiện tại. Bạn có chắc chắn?`)) {
+            event.target.value = null; 
+            return;
+        }
+
+        setIsProcessingQuestions(true);
+        setQuestionFileName('');
+
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const { value: text } = await mammoth.extractRawText({ arrayBuffer });
+
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const response = await ai.models.generateContent({
+                model: "gemini-2.5-flash",
+                contents: `Please parse the following text and extract the multiple-choice questions from it. Text: \n\n${text}`,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: Type.ARRAY,
+                        description: 'An array of multiple-choice questions extracted from the text.',
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                question: { type: Type.STRING, description: 'The text of the question.' },
+                                options: {
+                                    type: Type.ARRAY,
+                                    description: 'The possible answers for the question.',
+                                    items: {
+                                        type: Type.OBJECT,
+                                        properties: {
+                                            key: { type: Type.STRING, description: 'The option label (e.g., "A", "B", "C", "D").' },
+                                            value: { type: Type.STRING, description: 'The text of the option.' }
+                                        },
+                                        required: ['key', 'value']
+                                    }
+                                },
+                                correctAnswer: { type: Type.STRING, description: 'The key of the correct answer (e.g., "A").' }
+                            },
+                            required: ['question', 'options', 'correctAnswer']
+                        }
+                    },
+                    systemInstruction: "You are an intelligent assistant that processes text from documents and converts it into a structured JSON format for a quiz application. Analyze the text to identify each question, its options, and the correct answer. The correct answer might be indicated by an asterisk (*), being bolded, underlined, or explicitly stated.",
+                },
+            });
+            
+            const parsedJson = JSON.parse(response.text);
+
+            if (!Array.isArray(parsedJson)) {
+                throw new Error("API did not return a valid array of questions.");
+            }
+
+            const newQuestions = parsedJson.map((q, index) => ({
+                ...q,
+                id: Date.now() + index 
+            }));
+            
+            setQuestions(newQuestions);
+            setQuestionFileName(file.name);
+
+        } catch (error) {
+            console.error("Error processing question file:", error);
+            alert("Đã xảy ra lỗi khi xử lý tệp câu hỏi. Vui lòng kiểm tra định dạng tệp và thử lại.");
+            setQuestions([]); 
+            setQuestionFileName('');
+        } finally {
+            setIsProcessingQuestions(false);
+            if (event.target) {
+                event.target.value = null;
+            }
+        }
+    };
+      
       const handleClearStudents = () => {
         if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ danh sách học sinh không?')) {
             setStudentList([]);
@@ -179,6 +268,7 @@
       const handleClearQuestions = () => {
          if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ câu hỏi không?')) {
             setQuestions([]);
+            setQuestionFileName('');
         }
       }
 
@@ -208,7 +298,6 @@
                 <div className="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
                     <h3 className="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">1. Chuẩn bị & Cài đặt</h3>
                     
-                    {/* Tải danh sách lớp */}
                     <div className="mb-6">
                         <h4 className="font-medium text-gray-700 mb-2">Tải lên Danh sách Lớp (Excel)</h4>
                         <input
@@ -232,15 +321,43 @@
                             </p>
                         )}
                     </div>
+                    
                     <div className="mb-6">
                         <h4 className="font-medium text-gray-700 mb-2">Tải lên Bộ câu hỏi (Word)</h4>
-                         <label
-                            className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-not-allowed"
+                        <input
+                            type="file"
+                            accept=".docx"
+                            ref={questionFileInputRef}
+                            onChange={handleQuestionFileChange}
+                            className="hidden"
+                            id="question-file-upload"
+                            disabled={isProcessingQuestions}
+                        />
+                        <label
+                            htmlFor="question-file-upload"
+                            className={`w-full flex items-center justify-center px-4 py-2 border rounded-md shadow-sm text-sm font-medium text-white transition-colors duration-200 ${
+                                isProcessingQuestions 
+                                    ? 'bg-gray-400 cursor-not-allowed' 
+                                    : questionFileName 
+                                        ? 'bg-green-600 hover:bg-green-700 cursor-pointer' 
+                                        : 'bg-indigo-600 hover:bg-indigo-700 cursor-pointer'
+                            }`}
                         >
-                            <EditIcon />
-                            Chọn file .docx (sắp có)
+                            {isProcessingQuestions ? <SpinnerIcon /> : <EditIcon />}
+                            {isProcessingQuestions 
+                                ? 'Đang xử lý...' 
+                                : questionFileName 
+                                    ? 'Thay đổi file' 
+                                    : 'Chọn file .docx'
+                            }
                         </label>
+                        {questionFileName && !isProcessingQuestions && (
+                            <p className="text-sm text-green-700 mt-2">
+                                Đã tải lên: <strong>{questionFileName}</strong> ({questions.length} câu hỏi)
+                            </p>
+                        )}
                     </div>
+
 
                     <div className="mt-8 border-t pt-6">
                          <button
@@ -258,7 +375,6 @@
                 <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
                     <h3 className="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">2. Dữ liệu & Quản lý</h3>
                     
-                    {/* Quản lý danh sách học sinh */}
                     <div className="mb-8">
                         <div className="flex justify-between items-center mb-3">
                             <h4 className="font-medium text-gray-700">Danh sách Học sinh</h4>
@@ -294,7 +410,6 @@
                         </div>
                     </div>
 
-                     {/* Quản lý câu hỏi */}
                     <div>
                         <div className="flex justify-between items-center mb-3">
                             <h4 className="font-medium text-gray-700">Danh sách Câu hỏi</h4>
@@ -307,7 +422,7 @@
                         <div className="max-h-96 overflow-y-auto border rounded-md p-4 space-y-6">
                             {questions.length > 0 ? (
                                 questions.map((q, index) => (
-                                    <div key={q.id} className="border-b pb-4">
+                                    <div key={q.id} className="border-b pb-4 last:border-b-0">
                                         <p className="font-semibold text-gray-800 mb-2">Câu {index + 1}: {q.question}</p>
                                         <div className="space-y-1">
                                             {q.options.map(option => (
@@ -329,7 +444,7 @@
                                     </div>
                                 ))
                             ) : (
-                                <p className="text-center text-gray-500 p-8">Chưa có dữ liệu câu hỏi.</p>
+                                <p className="text-center text-gray-500 p-8">Chưa có dữ liệu câu hỏi. Vui lòng tải lên file Word.</p>
                             )}
                         </div>
                     </div>
@@ -340,7 +455,6 @@
     };
 
     const StudentFlow = ({ onNavigate }) => {
-      // Giao diện tĩnh cho luồng học sinh
       return (
         <div className="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
             <button 
@@ -387,14 +501,11 @@
     const App = () => {
       const [currentPage, setCurrentPage] = useState('landing');
       
-      // State được nâng lên cấp App
       const [studentList, setStudentList] = useState([]);
       const [studentFileName, setStudentFileName] = useState('');
-      const [questions, setQuestions] = useState([
-        { id: 1, question: 'Thủ đô của Việt Nam là gì?', options: [{key: 'A', value: 'Hà Nội'}, {key: 'B', value: 'Đà Nẵng'}, {key: 'C', value: 'TP. HCM'}, {key: 'D', value: 'Hải Phòng'}], correctAnswer: 'A' },
-        { id: 2, question: '1 + 1 = ?', options: [{key: 'A', value: '1'}, {key: 'B', value: '2'}, {key: 'C', value: '3'}, {key: 'D', value: '4'}], correctAnswer: 'B' },
-        { id: 3, question: 'Hành tinh nào gần Mặt trời nhất?', options: [{key: 'A', value: 'Trái Đất'}, {key: 'B', value: 'Sao Hỏa'}, {key: 'C', value: 'Sao Thủy'}, {key: 'D', value: 'Sao Kim'}], correctAnswer: 'C' },
-      ]);
+      const [questions, setQuestions] = useState([]);
+      const [questionFileName, setQuestionFileName] = useState('');
+
 
       const renderPage = () => {
         switch (currentPage) {
@@ -407,6 +518,8 @@
                         setStudentFileName={setStudentFileName}
                         questions={questions}
                         setQuestions={setQuestions}
+                        questionFileName={questionFileName}
+                        setQuestionFileName={setQuestionFileName}
                     />;
           case 'student':
             return <StudentFlow onNavigate={setCurrentPage} />;
